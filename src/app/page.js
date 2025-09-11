@@ -1,11 +1,14 @@
-import SpiralOverlay from '../components/SpiralOverlay';
+import CubeScroll from '../components/CubeScroll';
 
 export default function Home() {
     return (
         <main>
-            {/* <HeroSection />  */}
+            {/* <HeroSection /> */}
 
-            <SpiralOverlay />
+            <CubeScroll />
+            {/* <Particle /> */}
+
+            {/* <ThreeScene /> */}
         </main>
     );
 }

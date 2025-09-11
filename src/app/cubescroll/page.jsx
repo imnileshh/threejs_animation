@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-const SpiralOverlay = () => {
+const CubeScroll = () => {
     const canvasRef = useRef(null);
     useEffect(() => {
         const loader = new THREE.TextureLoader();
@@ -19,60 +19,115 @@ const SpiralOverlay = () => {
             antialias: true,
             alpha: true,
         });
-
+        camera.position.z = 5;
         renderer.setSize(window.innerWidth, window.innerHeight);
-        // document.body.appendChild(renderer.domElement);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        // Hollow cube
+        function createParticleCube(size = 0, divisions = 0) {
+            const positions = [];
+            // const step = 1 / divisions; // controls number of points per edge
+
+            // Define cube vertices
+            const v = [
+                [size / 2, size / 2, size / 2], // 0
+                [size / 2, size / 2, -size / 2], // 1
+                [size / 2, -size / 2, size / 2], // 2
+                [size / 2, -size / 2, -size / 2], // 3
+                [-size / 2, size / 2, size / 2], // 4
+                [-size / 2, size / 2, -size / 2], // 5
+                [-size / 2, -size / 2, size / 2], // 6
+                [-size / 2, -size / 2, -size / 2], // 7
+            ];
+
+            // Define edges as pairs of vertex indices
+            const edges = [
+                [0, 1],
+                [0, 2],
+                [0, 4],
+                [7, 6],
+                [7, 5],
+                [7, 3],
+                [1, 5],
+                [1, 3],
+                [2, 3],
+                [2, 6],
+                [4, 5],
+                [4, 6],
+            ];
+
+            // Generate points along edges
+            edges.forEach(([a, b]) => {
+                const [x1, y1, z1] = v[a];
+                const [x2, y2, z2] = v[b];
+                positions.push(x1, y1, z1, x2, y2, z2);
+            });
+
+            // Create BufferGeometry
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+            // Particle material
+            const material = new THREE.LineBasicMaterial({
+                color: 0xffffff,
+            });
+
+            return new THREE.LineSegments(geometry, material);
+        }
+        // const cube = createParticleCube(3);
+        // scene.add(cube);
+
+        function createPieParticles3D(
+            radius = 5,
+            angleStart = 0,
+            angleEnd = Math.PI / 4,
+            density = 50,
+            thickness = 0.1, // depth of pie
+            color = 0xffffff
+        ) {
+            const positions = [];
+
+            for (let y = -thickness / 2; y <= thickness / 2; y += thickness / density) {
+                for (let r = 0; r <= radius; r += radius / density) {
+                    for (let theta = angleStart; theta <= angleEnd; theta += Math.PI / density) {
+                        const x = r * Math.cos(theta);
+                        const z = r * Math.sin(theta);
+                        positions.push(x, y, z); // 3D: add y variation
+                    }
+                }
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.08,
+                color: color,
+            });
+
+            return new THREE.Points(geometry, material);
+        }
+
+        const pie = createPieParticles3D(5, 0, Math.PI / 4, 50);
+        pie.position.set(-4, 0.5, 0);
+        scene.add(pie);
 
         const geometry = new THREE.BoxGeometry(1.6, 1.6, 1.6);
 
-        // const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-        function loadColorTexture(path) {
-            const texture = loader.load(path);
-            texture.colorSpace = THREE.SRGBColorSpace;
+        const newmaterial = new THREE.PointsMaterial({
+            sizeAttenuation: true,
+            color: 0xffffff,
+            size: 0.09,
+        });
+        const cube = new THREE.Points(geometry, newmaterial);
 
-            return texture;
-        }
-        const materials = [
-            new THREE.MeshBasicMaterial({
-                map: loadColorTexture('/images/9a59a964-90b3-455c-a9b0-85351aec3fd5-thumb.jpeg'),
-            }),
-            new THREE.MeshBasicMaterial({
-                map: loadColorTexture('/images/9a59ad2e-8564-4dad-aa6f-19f61fb93618-thumb.jpeg'),
-            }),
-            new THREE.MeshBasicMaterial({
-                map: loadColorTexture('/images/9a59ad67-2bf5-4f1f-b50e-53e1b962c72d-thumb.jpeg'),
-            }),
-            new THREE.MeshBasicMaterial({
-                map: loadColorTexture('/images/DEA (5).png'),
-            }),
-            new THREE.MeshBasicMaterial({
-                map: loadColorTexture('/images/DEA.png'),
-            }),
-            new THREE.MeshBasicMaterial({
-                map: loadColorTexture('/images/logo1-removebg-preview.png'),
-            }),
-        ];
-        const cube = new THREE.Mesh(geometry, materials);
-
-        scene.add(cube);
-
-        camera.position.z = 3;
-
-        // const controls = new OrbitControls(camera, renderer.domElement);
-        // controls.enableDamping = false; // smooth motion
-        // controls.dampingFactor = 0.05;
-        // controls.enablePan = false; // allow panning
-        // controls.enableZoom = false; // allow zooming (scroll)
-        // controls.rotateSpeed = 1.5;
-        // controls.zoomSpeed = 3.0;
-        // controls.panSpeed = 0.8;
+        // scene.add(cube);
 
         // Track mouse position
-        let mouseX = 0;
-        let mouseY = 0;
+        let mouseX;
+        let mouseY;
 
         const handleMouseMove = event => {
-            // Normalize mouse position to range [-1, 1]
             mouseX = (event.clientX / window.innerWidth) * 2 - 1;
             mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
         };
@@ -85,49 +140,20 @@ const SpiralOverlay = () => {
         };
         window.addEventListener('scroll', handleScroll);
 
-        // Build positions/rotations array based on number of pages
-        // We'll count the number of h-screen elements on the page (including the top spacer).
         const pageElements = Array.from(document.querySelectorAll('.h-screen'));
-        // If your layout changes, ensure every screen-sized block has class "h-screen"
         const pagesCount = Math.max(1, pageElements.length);
-        // console.log(pagesCount, pageElements);
 
-        // Define X positions (zigzag), y offsets (how much cube moves down per page), and rotation for each page.
-        // positions[0] is the initial (top) position (center). Then alternate right/left.
-        const xLeft = -2.5;
-        const xRight = 2;
-        const xCenter = 0;
-
-        // Build arrays length = pagesCount
         const positionsX = [0, 2, -2.5, 2, -2.5, 2, -2.5];
         const positionsY = [0, 0, 0, 0, 0, 0, 0];
         const rotY = [
             0,
-            1,
-            3.741592653589793,
-            4.1707963267948966,
-            2.18 * Math.PI,
-            2.35 * Math.PI,
-            3.2 * Math.PI,
+            1.6,
+            3.241592653589793,
+            4.7207963267948966,
+            2.01 * Math.PI,
+            2.52 * Math.PI,
+            2.99 * Math.PI,
         ];
-
-        // Start: centered at top (first h-screen).
-        // for (let i = 0; i < pagesCount; i++) {
-        //     if (i === 0) {
-        //         positionsX.push(xCenter); // initial centered
-        //     } else {
-        //         // alternate left/right for each subsequent page
-        //         positionsX.push(i % 2 === 1 ? xRight : xLeft);
-        //     }
-        //     // vertical offset in scene units per page (tweak multiplier to taste)
-        //     positionsY.push(-i * 0.2); // downward spacing per section (tweak value)
-        //     // rotation that shows appropriate face - customize mapping as needed
-        //     // simple mapping: front(0), right(PI/2), back(PI), left(-PI/2), repeat...
-        //     const r =
-        //         i % 4 === 0 ? 0 : i % 4 === 1 ? Math.PI / 2 : i % 4 === 2 ? Math.PI : -Math.PI / 2;
-        //     rotY.push(r);
-        // }
-        console.log('positionsX', positionsX, 'positionsY', positionsY, 'rotY', rotY);
 
         // Animation loop with smooth interpolation between pages
         function animate() {
@@ -139,51 +165,27 @@ const SpiralOverlay = () => {
             const startIndex = Math.min(pageIndex, pagesCount - 1);
             const endIndex = Math.min(pageIndex + 1, pagesCount - 1);
 
-            const targetX = THREE.MathUtils.lerp(
-                positionsX[startIndex],
-                positionsX[endIndex],
-                progress
-            );
-            const targetY = THREE.MathUtils.lerp(
-                positionsY[startIndex],
-                positionsY[endIndex],
-                progress
-            );
             const targetRotY = THREE.MathUtils.lerp(rotY[startIndex], rotY[endIndex], progress);
 
-            // --- NEW: 3D "reveal" effect only for the first section ---
             if (pageIndex === 0) {
                 const reveal = progress; // 0 -> 1 as we scroll down first section
 
-                // Move cube forward in z-axis
                 cube.position.z = THREE.MathUtils.lerp(-2, 0, reveal);
 
-                // Scale cube from small to normal
                 const scale = THREE.MathUtils.lerp(0.6, 1, reveal);
                 cube.scale.set(scale, scale, scale);
 
-                // Fade in materials
-                materials.forEach(m => {
-                    m.transparent = true;
-                    m.opacity = THREE.MathUtils.lerp(0.3, 1, reveal);
-                });
+                newmaterial.transparent = true;
+                newmaterial.opacity = THREE.MathUtils.lerp(0.3, 1, reveal);
             } else {
-                // For other sections, keep normal position.z and opacity
                 cube.position.z = 0;
                 cube.scale.set(1, 1, 1);
-                materials.forEach(m => {
-                    m.opacity = 1;
-                });
+                newmaterial.opacity = 1;
             }
 
-            // Smooth X, Y positioning
-            cube.position.x += (targetX - cube.position.x) * 0.08;
-            cube.position.y += (targetY - cube.position.y) * 0.08;
-
-            // Smooth rotation
             cube.rotation.y += (targetRotY - cube.rotation.y) * 0.5;
+            // pie.rotation.y += (targetRotY - pie.rotation.y) * 0.5;
 
-            // controls.update();
             renderer.render(scene, camera);
         }
 
@@ -204,10 +206,11 @@ const SpiralOverlay = () => {
             renderer.dispose();
             // dispose geometries/materials/textures
             geometry.dispose();
-            materials.forEach(m => {
-                if (m.map) m.map.dispose();
-                m.dispose();
-            });
+            newmaterial.dispose();
+            // materials.forEach(m => {
+            //     if (m.map) m.map.dispose();
+            //     m.dispose();
+            // });
         };
     }, []);
 
@@ -334,4 +337,4 @@ const SpiralOverlay = () => {
     );
 };
 
-export default SpiralOverlay;
+export default CubeScroll;
