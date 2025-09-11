@@ -1,10 +1,14 @@
 'use client';
+import gsap from 'gsap';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 const CubeScroll = () => {
     const canvasRef = useRef(null);
     useEffect(() => {
         const loader = new THREE.TextureLoader();
+        const star = loader.load(
+            '/images/20250911_1456_Glowing_Star_Circle_simple_compose_01k4w1gveyer2bmw469bmdzym2-removebg-preview.png'
+        );
 
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(
@@ -19,132 +23,68 @@ const CubeScroll = () => {
             antialias: true,
             alpha: true,
         });
-        camera.position.z = 5;
+        camera.position.set(0, 5, 10);
+        camera.lookAt(0, 2, 0);
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
 
-        // Hollow cube
-        function createParticleCube(size = 0, divisions = 0) {
-            const positions = [];
-            // const step = 1 / divisions; // controls number of points per edge
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        const pointLight = new THREE.PointLight(0xffffff, 0.8);
+        pointLight.position.set(5, 10, 5);
+        scene.add(ambientLight, pointLight);
 
-            // Define cube vertices
-            const v = [
-                [size / 2, size / 2, size / 2], // 0
-                [size / 2, size / 2, -size / 2], // 1
-                [size / 2, -size / 2, size / 2], // 2
-                [size / 2, -size / 2, -size / 2], // 3
-                [-size / 2, size / 2, size / 2], // 4
-                [-size / 2, size / 2, -size / 2], // 5
-                [-size / 2, -size / 2, size / 2], // 6
-                [-size / 2, -size / 2, -size / 2], // 7
-            ];
-
-            // Define edges as pairs of vertex indices
-            const edges = [
-                [0, 1],
-                [0, 2],
-                [0, 4],
-                [7, 6],
-                [7, 5],
-                [7, 3],
-                [1, 5],
-                [1, 3],
-                [2, 3],
-                [2, 6],
-                [4, 5],
-                [4, 6],
-            ];
-
-            // Generate points along edges
-            edges.forEach(([a, b]) => {
-                const [x1, y1, z1] = v[a];
-                const [x2, y2, z2] = v[b];
-                positions.push(x1, y1, z1, x2, y2, z2);
-            });
-
-            // Create BufferGeometry
+        function createPieParticles(startAngle, angleSpan, innerRadius, outerRadius, pointCount) {
             const geometry = new THREE.BufferGeometry();
-            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            const positions = new Float32Array(pointCount * 3);
 
-            // Particle material
-            const material = new THREE.LineBasicMaterial({
-                color: 0xffffff,
-            });
+            for (let i = 0; i < pointCount; i++) {
+                // Random angle and radius within the wedge
+                const angle = THREE.MathUtils.degToRad(startAngle + Math.random() * angleSpan);
+                const radius = innerRadius + Math.random() * (outerRadius - innerRadius);
 
-            return new THREE.LineSegments(geometry, material);
-        }
-        // const cube = createParticleCube(3);
-        // scene.add(cube);
+                // Convert polar to Cartesian (flat on XZ plane)
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+                // Optional: small random Y-offset for thickness
+                const y = (Math.random() - 0.5) * 0.1;
 
-        function createPieParticles3D(
-            radius = 5,
-            angleStart = 0,
-            angleEnd = Math.PI / 4,
-            density = 50,
-            thickness = 0.1, // depth of pie
-            color = 0xffffff
-        ) {
-            const positions = [];
-
-            for (let y = -thickness / 2; y <= thickness / 2; y += thickness / density) {
-                for (let r = 0; r <= radius; r += radius / density) {
-                    for (let theta = angleStart; theta <= angleEnd; theta += Math.PI / density) {
-                        const x = r * Math.cos(theta);
-                        const z = r * Math.sin(theta);
-                        positions.push(x, y, z); // 3D: add y variation
-                    }
-                }
+                // Write the position
+                positions[3 * i] = x;
+                positions[3 * i + 1] = y;
+                positions[3 * i + 2] = z;
             }
-
-            const geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 
             const material = new THREE.PointsMaterial({
-                size: 0.08,
-                color: color,
+                color: 'purple',
+                size: 0.1,
+                sizeAttenuation: true,
+                transparent: true,
+                opacity: 0.8,
             });
 
             return new THREE.Points(geometry, material);
         }
+        const slices = [];
+        const sliceCount = 7;
+        const angleSpan = 45; // each slice covers 45 degrees (example)
+        const radiusInner = 0.5;
+        const radiusOuter = 5.0;
+        const verticalGap = 1;
 
-        const pie = createPieParticles3D(5, 0, Math.PI / 4, 50);
-        pie.position.set(-4, 0.5, 0);
-        scene.add(pie);
+        for (let i = 0; i < sliceCount; i++) {
+            // Calculate start angle (e.g., fan out around 360°)
+            const startAngle = i * angleSpan;
+            const slice = createPieParticles(startAngle, angleSpan, radiusInner, radiusOuter, 500);
 
-        const geometry = new THREE.BoxGeometry(1.6, 1.6, 1.6);
+            // Position and rotate each slice for artistic layout
+            slice.position.y = i * verticalGap;
+            slice.rotation.y = THREE.MathUtils.degToRad(-i * 5); // slight rotation per slice
+            slices.push(slice);
+        }
 
-        const newmaterial = new THREE.PointsMaterial({
-            sizeAttenuation: true,
-            color: 0xffffff,
-            size: 0.09,
-        });
-        const cube = new THREE.Points(geometry, newmaterial);
+        slices.map(slice => scene.add(slice));
 
-        // scene.add(cube);
-
-        // Track mouse position
-        let mouseX;
-        let mouseY;
-
-        const handleMouseMove = event => {
-            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-            mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-        };
-        window.addEventListener('mousemove', handleMouseMove);
-
-        // Track scroll
-        let scrollY = 0;
-        const handleScroll = () => {
-            scrollY = window.scrollY || window.pageYOffset || 0;
-        };
-        window.addEventListener('scroll', handleScroll);
-
-        const pageElements = Array.from(document.querySelectorAll('.h-screen'));
-        const pagesCount = Math.max(1, pageElements.length);
-
-        const positionsX = [0, 2, -2.5, 2, -2.5, 2, -2.5];
-        const positionsY = [0, 0, 0, 0, 0, 0, 0];
         const rotY = [
             0,
             1.6,
@@ -154,6 +94,52 @@ const CubeScroll = () => {
             2.52 * Math.PI,
             2.99 * Math.PI,
         ];
+
+        let currentSliceIndex = 0;
+        const scrollThreshold = 600; // pixels to scroll before triggering
+        window.addEventListener('scroll', () => {
+            if (
+                window.scrollY > scrollThreshold * (currentSliceIndex + 1) &&
+                currentSliceIndex < slices.length
+            ) {
+                explodeSlice(slices[currentSliceIndex]);
+                currentSliceIndex++;
+
+                // Move up the remaining slices
+                for (let j = currentSliceIndex; j < slices.length; j++) {
+                    // Move each slice up by verticalGap
+                    gsap.to(slices[j].position, {
+                        y: slices[j].position.y - verticalGap,
+                        duration: 1,
+                    });
+                }
+            }
+        });
+        function explodeSlice(slice) {
+            const geometry = slice.geometry;
+            const positions = geometry.attributes.position.array;
+            const count = positions.length / 3;
+            // Displace each particle randomly
+            for (let i = 0; i < count; i++) {
+                const ix = 3 * i,
+                    iy = ix + 1,
+                    iz = ix + 2;
+                // Push x/z outwards and give a bit of upward motion
+                positions[ix] += (Math.random() - 0.5) * 2.0;
+                positions[iy] += Math.random() * 2.0;
+                positions[iz] += (Math.random() - 0.5) * 2.0;
+            }
+            geometry.attributes.position.needsUpdate = true;
+
+            // Fade out the slice (optional)
+            gsap.to(slice.material, {
+                opacity: 0,
+                duration: 1,
+                onComplete: () => {
+                    scene.remove(slice);
+                },
+            });
+        }
 
         // Animation loop with smooth interpolation between pages
         function animate() {
@@ -169,23 +155,23 @@ const CubeScroll = () => {
 
             if (pageIndex === 0) {
                 const reveal = progress; // 0 -> 1 as we scroll down first section
-
-                cube.position.z = THREE.MathUtils.lerp(-2, 0, reveal);
-
-                const scale = THREE.MathUtils.lerp(0.6, 1, reveal);
-                cube.scale.set(scale, scale, scale);
-
-                newmaterial.transparent = true;
-                newmaterial.opacity = THREE.MathUtils.lerp(0.3, 1, reveal);
+                slices.forEach(slice => {
+                    slice.position.z = THREE.MathUtils.lerp(-2, 0, reveal);
+                    const scale = THREE.MathUtils.lerp(0.6, 1, reveal);
+                    slice.scale.set(scale, scale, scale);
+                    slice.material.transparent = true;
+                    slice.material.opacity = THREE.MathUtils.lerp(0.3, 1, reveal);
+                });
             } else {
-                cube.position.z = 0;
-                cube.scale.set(1, 1, 1);
-                newmaterial.opacity = 1;
+                slices.forEach(slice => {
+                    slice.position.z = 0;
+                    slice.scale.set(1, 1, 1);
+                    slice.material.opacity = 1;
+                });
             }
-
-            cube.rotation.y += (targetRotY - cube.rotation.y) * 0.5;
-            // pie.rotation.y += (targetRotY - pie.rotation.y) * 0.5;
-
+            slices.forEach(slice => {
+                slice.rotation.y = THREE.MathUtils.lerp(slice.rotation.y, targetRotY, 0.05);
+            });
             renderer.render(scene, camera);
         }
 
@@ -204,7 +190,6 @@ const CubeScroll = () => {
             window.removeEventListener('scroll', handleScroll);
             window.removeEventListener('resize', handleResize);
             renderer.dispose();
-            // dispose geometries/materials/textures
             geometry.dispose();
             newmaterial.dispose();
             // materials.forEach(m => {
@@ -221,7 +206,7 @@ const CubeScroll = () => {
                 className="fixed top-0 left-0 w-full h-full bg-transparent z-50 "
             />
             {/* Intro (centered) */}
-            <div className="h-screen flex items-center justify-center px-8 bg-gradient-to-b from-slate-900 to-slate-800 text-white z-100">
+            <div className="h-screen flex items-center justify-center px-8 bg-slate-900 text-white z-100">
                 <div className="max-w-3xl text-center">
                     <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
                         The Labyrinth Collection
@@ -245,7 +230,7 @@ const CubeScroll = () => {
             </div>
 
             {/* Section 1: Left aligned */}
-            <section className="h-screen flex items-center justify-start px-20 bg-slate-800/70 text-white">
+            <section className="h-screen flex items-center justify-start px-20 bg-slate-900 text-white">
                 <div className="max-w-xl">
                     <h2 className="text-3xl font-semibold mb-2">Section 1 — Folk Pottery</h2>
                     <p className="text-slate-300 mb-4">
@@ -275,7 +260,7 @@ const CubeScroll = () => {
             </section>
 
             {/* Section 3: Left aligned */}
-            <section className="h-screen flex items-center justify-start px-20 bg-slate-800/60 text-white">
+            <section className="h-screen flex items-center justify-start px-20 bg-slate-900 text-white">
                 <div className="max-w-xl">
                     <h2 className="text-3xl font-semibold mb-2">Section 3 — Street Mural</h2>
                     <p className="text-slate-300 mb-4">
@@ -305,7 +290,7 @@ const CubeScroll = () => {
             </section>
 
             {/* Section 5: Left aligned (top face) */}
-            <section className="h-screen flex items-center justify-start px-20 bg-slate-800/60 text-white">
+            <section className="h-screen flex items-center justify-start px-20 bg-slate-900 text-white">
                 <div className="max-w-xl">
                     <h2 className="text-3xl font-semibold mb-2">Section 5 — Heritage Music</h2>
                     <p className="text-slate-300 mb-4">
@@ -320,7 +305,7 @@ const CubeScroll = () => {
             </section>
 
             {/* Section 6: Right aligned (bottom face) */}
-            <section className="h-screen flex items-center justify-end px-20 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
+            <section className="h-screen flex items-center justify-end px-20 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white">
                 <div className="max-w-xl text-right">
                     <h2 className="text-3xl font-semibold mb-2">Section 6 — Credits</h2>
                     <p className="text-slate-300 mb-4">
