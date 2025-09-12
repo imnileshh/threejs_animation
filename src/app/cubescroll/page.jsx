@@ -1,5 +1,4 @@
 'use client';
-import gsap from 'gsap';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 const CubeScroll = () => {
@@ -28,62 +27,62 @@ const CubeScroll = () => {
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-        const pointLight = new THREE.PointLight(0xffffff, 0.8);
-        pointLight.position.set(5, 10, 5);
-        scene.add(ambientLight, pointLight);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
+        function createPieSlice(innerR, outerR, angleStart, angleEnd, thickness = 0.3) {
+            const shape = new THREE.Shape();
 
-        function createPieParticles(startAngle, angleSpan, innerRadius, outerRadius, pointCount) {
-            const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(pointCount * 3);
+            // Move to inner arc start
+            shape.moveTo(Math.cos(angleStart) * innerR, Math.sin(angleStart) * innerR);
 
-            for (let i = 0; i < pointCount; i++) {
-                // Random angle and radius within the wedge
-                const angle = THREE.MathUtils.degToRad(startAngle + Math.random() * angleSpan);
-                const radius = innerRadius + Math.random() * (outerRadius - innerRadius);
+            // Outer arc
+            shape.lineTo(Math.cos(angleStart) * outerR, Math.sin(angleStart) * outerR);
+            shape.absarc(0, 0, outerR, angleStart, angleEnd, false);
 
-                // Convert polar to Cartesian (flat on XZ plane)
-                const x = Math.cos(angle) * radius;
-                const z = Math.sin(angle) * radius;
-                // Optional: small random Y-offset for thickness
-                const y = (Math.random() - 0.5) * 0.1;
+            // Back to inner arc
+            shape.lineTo(Math.cos(angleEnd) * innerR, Math.sin(angleEnd) * innerR);
+            shape.absarc(0, 0, innerR, angleEnd, angleStart, true);
 
-                // Write the position
-                positions[3 * i] = x;
-                positions[3 * i + 1] = y;
-                positions[3 * i + 2] = z;
-            }
-            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            const extrudeSettings = {
+                depth: thickness,
+                bevelEnabled: false,
+            };
 
-            const material = new THREE.PointsMaterial({
-                color: 'purple',
-                size: 0.1,
-                sizeAttenuation: true,
+            const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            geometry.rotateX(-Math.PI / 2);
+
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xffffff, // purple
+                shininess: 120, // higher = tighter highlights
+                specular: 0xffffff, // highlight color
                 transparent: true,
-                opacity: 0.8,
+                opacity: 0.95, // slight transparency like glass
             });
 
-            return new THREE.Points(geometry, material);
+            return new THREE.Mesh(geometry, material);
         }
+
         const slices = [];
-        const sliceCount = 7;
-        const angleSpan = 45; // each slice covers 45 degrees (example)
-        const radiusInner = 0.5;
-        const radiusOuter = 5.0;
-        const verticalGap = 1;
+        const sliceCount = 7; // number of steps
+        const angleStep = Math.PI / 4;
+        const heightStep = 1.2; // vertical distance per slice
+        const radius = 3; // distance from center (like pole radius + step width)
 
         for (let i = 0; i < sliceCount; i++) {
-            // Calculate start angle (e.g., fan out around 360°)
-            const startAngle = i * angleSpan;
-            const slice = createPieParticles(startAngle, angleSpan, radiusInner, radiusOuter, 500);
+            const angleStart = 0;
+            const angleEnd = Math.PI / 4;
+            const slice = createPieSlice(0.5, radius, angleStart, angleEnd);
 
-            // Position and rotate each slice for artistic layout
-            slice.position.y = i * verticalGap;
-            slice.rotation.y = THREE.MathUtils.degToRad(-i * 5); // slight rotation per slice
+            // Spiral placement
+            const angle = i * angleStep;
+            slice.position.set(Math.cos(angle) * radius, i * heightStep, Math.sin(angle) * radius);
+
+            slice.rotation.y = angle;
+            slice.rotation.z = Math.PI;
+
             slices.push(slice);
+            scene.add(slice);
         }
-
-        slices.map(slice => scene.add(slice));
 
         const rotY = [
             0,
@@ -95,52 +94,14 @@ const CubeScroll = () => {
             2.99 * Math.PI,
         ];
 
-        let currentSliceIndex = 0;
-        const scrollThreshold = 600; // pixels to scroll before triggering
-        window.addEventListener('scroll', () => {
-            if (
-                window.scrollY > scrollThreshold * (currentSliceIndex + 1) &&
-                currentSliceIndex < slices.length
-            ) {
-                explodeSlice(slices[currentSliceIndex]);
-                currentSliceIndex++;
+        const pageElements = Array.from(document.querySelectorAll('.h-screen'));
+        const pagesCount = Math.max(1, pageElements.length);
 
-                // Move up the remaining slices
-                for (let j = currentSliceIndex; j < slices.length; j++) {
-                    // Move each slice up by verticalGap
-                    gsap.to(slices[j].position, {
-                        y: slices[j].position.y - verticalGap,
-                        duration: 1,
-                    });
-                }
-            }
-        });
-        function explodeSlice(slice) {
-            const geometry = slice.geometry;
-            const positions = geometry.attributes.position.array;
-            const count = positions.length / 3;
-            // Displace each particle randomly
-            for (let i = 0; i < count; i++) {
-                const ix = 3 * i,
-                    iy = ix + 1,
-                    iz = ix + 2;
-                // Push x/z outwards and give a bit of upward motion
-                positions[ix] += (Math.random() - 0.5) * 2.0;
-                positions[iy] += Math.random() * 2.0;
-                positions[iz] += (Math.random() - 0.5) * 2.0;
-            }
-            geometry.attributes.position.needsUpdate = true;
-
-            // Fade out the slice (optional)
-            gsap.to(slice.material, {
-                opacity: 0,
-                duration: 1,
-                onComplete: () => {
-                    scene.remove(slice);
-                },
-            });
-        }
-
+        let scrollY = 0;
+        const handleScroll = () => {
+            scrollY = window.scrollY || window.pageYOffset || 0;
+        };
+        window.addEventListener('scroll', handleScroll);
         // Animation loop with smooth interpolation between pages
         function animate() {
             const sectionHeight = window.innerHeight || 1;
