@@ -46,10 +46,11 @@ export default function StarfieldBackground({ spiralTrigger }) {
         const renderer = new THREE.WebGLRenderer({
             canvas: canvasRef.current,
             antialias: true,
+            alpha: true,
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setClearColor(0x0a0e54);
+        renderer.setClearColor(0x000000);
 
         // 🌌 Create star grid
         const starsGeometry = new THREE.BufferGeometry();
@@ -285,7 +286,7 @@ void main() {
     }, [spiralTrigger]);
 
     return (
-        <div className="fixed inset-0 -z-10">
+        <div className="fixed inset-0 z-0">
             <canvas ref={canvasRef} className="w-full h-full" />
         </div>
     );

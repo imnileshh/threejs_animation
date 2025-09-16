@@ -22,8 +22,9 @@ const CubeScroll = () => {
             antialias: true,
             alpha: true,
         });
+
         camera.position.set(0, 5, 10);
-        camera.lookAt(0, 2, 0);
+        camera.lookAt(0, 9, 0);
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
 
@@ -56,6 +57,7 @@ const CubeScroll = () => {
                 shininess: 120, // higher = tighter highlights
                 specular: 0xffffff, // highlight color
                 transparent: true,
+                wireframe: true,
                 opacity: 0.95, // slight transparency like glass
             });
 
@@ -63,10 +65,10 @@ const CubeScroll = () => {
         }
 
         const slices = [];
-        const sliceCount = 7; // number of steps
+        const sliceCount = 7;
         const angleStep = Math.PI / 4;
-        const heightStep = 1.2; // vertical distance per slice
-        const radius = 3; // distance from center (like pole radius + step width)
+        const heightStep = 2;
+        const radius = 5;
 
         for (let i = 0; i < sliceCount; i++) {
             const angleStart = 0;
@@ -78,7 +80,7 @@ const CubeScroll = () => {
             slice.position.set(Math.cos(angle) * radius, i * heightStep, Math.sin(angle) * radius);
 
             slice.rotation.y = angle;
-            slice.rotation.z = Math.PI;
+            // slice.rotation.z = Math.PI;
 
             slices.push(slice);
             scene.add(slice);
@@ -153,10 +155,6 @@ const CubeScroll = () => {
             renderer.dispose();
             geometry.dispose();
             newmaterial.dispose();
-            // materials.forEach(m => {
-            //     if (m.map) m.map.dispose();
-            //     m.dispose();
-            // });
         };
     }, []);
 
