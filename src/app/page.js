@@ -1,14 +1,16 @@
-import CubeScroll from '../components/CubeScroll';
+import StarfieldBackground from '../components/StarfieldBackground';
 
 export default function Home() {
     return (
         <main>
             {/* <HeroSection /> */}
 
-            <CubeScroll />
+            {/* <CubeScroll /> */}
             {/* <Particle /> */}
-
+            <StarfieldBackground />
             {/* <ThreeScene /> */}
+
+            {/* <TubeEffect /> */}
         </main>
     );
 }

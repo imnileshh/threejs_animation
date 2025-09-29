@@ -27,6 +27,6 @@
         "src/app/components/ThreeScene.jsx",
         "src/app/components/StarfieldBackground.jsx",
         "src/components/CubeScroll.jsx"
-, "src/app/cubescroll/page.jsx"    ],
+, "src/app/cubescroll/page.jsx", "src/app/animation/page.jsx"    ],
     "exclude": ["node_modules"]
 }

@@ -30,8 +30,7 @@ function NewCode() {
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
-
-        camera.position.set(0, 4, 20);
+        camera.position.set(0, 0, 20);
         camera.lookAt(0, 0, 0);
         // Soft global light
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
@@ -69,9 +68,9 @@ function NewCode() {
 
             const material = new THREE.MeshStandardMaterial({
                 color: new THREE.Color('hsl(280, 100%, 70%)'),
-                metalness: 0.5, // strong reflections
-                roughness: 0.25, // shininess
-                envMapIntensity: 1.5, // boost HDRI reflection
+                metalness: 0.5,
+                roughness: 0.25,
+                envMapIntensity: 1.5,
             });
 
             return new THREE.Mesh(geometry, material);
@@ -94,7 +93,7 @@ function NewCode() {
                 new THREE.Color('hsl(280, 100%, 70%)')
             );
             slice.rotation.y = -Math.PI;
-            // slice.rotation.z = (Math.PI / 2) * 0.5;
+            slice.rotation.z = (Math.PI / 2) * 0.5;
             // slice.rotation.x = Math.PI / 8;
 
             scene.add(slice);
@@ -129,33 +128,60 @@ function NewCode() {
             const scrollY = window.scrollY;
             const sectionHeight = window.innerHeight;
             const progress = scrollY / sectionHeight;
+            const centerIndex = (sliceCount - 1) / 2;
 
             slices.forEach((slice, i) => {
                 const offset = i - progress;
 
-                let x = 0;
-                let y = 0;
-                let z = 0;
-
+                // --- Base position (same as before) ---
+                let x = 0,
+                    y = 0,
+                    z = 0;
                 if (offset > 0) {
-                    x = offset * 5;
-                    y = -offset * 6;
+                    x = offset * 12;
+                    y = -offset * 12;
                     z = offset * 2;
                 } else if (offset < 0) {
                     x = -offset * 18;
-                    y = -offset * 12;
+                    y = -offset * 13;
                     z = offset * 2;
                 }
 
-                // Scale + fade
-                let scale = 1 - Math.abs(offset) * 0.8;
-                let opacity = Math.max(1 - Math.abs(offset) * 0.9, 0);
+                // --- Scale + fade ---
+                const scale = 1 - Math.abs(offset) * 0.8;
+                const opacity = Math.max(1 - Math.abs(offset) * 0.9);
+
                 slice.position.set(x, y, z);
-
                 slice.scale.set(scale, scale, scale);
-                slice.material.transparent = false;
 
+                slice.material.transparent = true;
                 slice.material.opacity = opacity;
+
+                // --- Drift effect ---
+                const driftFactor = offset;
+                const driftIntensity = 0.5; // how much it slides sideways
+                const steerIntensity = 1.5; // yaw (like steering angle)
+                const leanIntensity = -0.3; // body tilt
+
+                // sideways drift in X/Z
+                const driftX = Math.sin(driftFactor) * driftIntensity + 0.3;
+                const driftZ = Math.cos(driftFactor) * driftIntensity + 0.2;
+
+                slice.position.x += driftX;
+                slice.position.z += driftZ;
+
+                // steering (yaw)
+                const angleFromPos = Math.atan2(z, x || 0.5);
+                const baseSpread = (i - centerIndex) * 0.005;
+                const twist = offset * 0.5;
+                slice.rotation.y =
+                    -Math.PI + baseSpread + angleFromPos + driftFactor * steerIntensity + twist;
+
+                // body lean (like car banking)
+                slice.rotation.x = 0.2 + Math.sin(driftFactor * Math.PI) * leanIntensity;
+
+                // roll for extra drift feel
+                slice.rotation.z = offset * 0.1;
             });
         }
 
@@ -167,8 +193,8 @@ function NewCode() {
             start: 'top top',
             end: 'bottom bottom',
             snap: {
-                snapTo: 1 / (slices.length - 1), // snap per slice
-                duration: 0.9, // smooth transition
+                snapTo: 1 / (slices.length - 1),
+                duration: 0.5, // smooth transition
                 ease: 'power2.inOut',
             },
         });
