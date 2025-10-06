@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader';
-import StarfieldBackground from '../../components/StarfieldBackground';
+import TubeEffect from '../../components/oldcode/TubeEffect';
 
 const Animation = () => {
     const canvasRef = useRef(null);
@@ -358,7 +358,7 @@ void main() {
 
             {/* ✅ MODIFIED: This div is now fixed behind the canvas */}
             <div className="h-[200vh] revealed-content fixed inset-0 flex items-center justify-center text-center z-0 opacity-0 isolate">
-                {showStarfield && <StarfieldBackground />}
+                {showStarfield && <TubeEffect />}
                 <h1 className="text-5xl md:text-7xl font-bold">Your New Section</h1>
             </div>
         </main>

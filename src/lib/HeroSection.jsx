@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import AlephScrollScene from '../components/AlephScrollScene';
+import AlephScrollScene from '../components/oldcode/AlephScrollScene';
 import StarfieldBackground from '../components/StarfieldBackground';
 
 export default function HeroSection() {
